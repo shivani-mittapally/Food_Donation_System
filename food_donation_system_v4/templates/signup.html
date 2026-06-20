@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Up — Food Donation System</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body class="auth-page">
+<div class="auth-box" style="max-width:520px">
+  <div class="auth-logo">
+    <div class="icon">🍱</div>
+    <h1>Create Account</h1>
+    <p>Join FoodDonate — Make a difference today</p>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="alert alert-{{ cat }}"><i class="fas fa-info-circle"></i> {{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="auth-card">
+    <form method="POST" action="{{ url_for('signup') }}">
+      <div class="form-grid" style="gap:14px">
+
+        <!-- Role selector -->
+        <div class="form-group">
+          <label><i class="fas fa-user-tag"></i> I am a …</label>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+            <label class="role-option" id="lbl-donor" style="cursor:pointer; display:flex; align-items:center; gap:10px; background:rgba(34,197,94,.1); border:2px solid var(--green); border-radius:8px; padding:12px 16px; font-size:.9rem; font-weight:600; color:var(--green)">
+              <input type="radio" name="role" value="donor" checked style="width:auto; margin:0"> 🤲 Donor
+            </label>
+            <label class="role-option" id="lbl-ngo" style="cursor:pointer; display:flex; align-items:center; gap:10px; background:var(--surface2); border:2px solid var(--border); border-radius:8px; padding:12px 16px; font-size:.9rem; font-weight:600; color:var(--text-muted)">
+              <input type="radio" name="role" value="ngo" style="width:auto; margin:0"> 🏢 NGO
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label><i class="fas fa-user"></i> Full Name *</label>
+          <input type="text" name="name" placeholder="Your full name" required>
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-envelope"></i> Email *</label>
+          <input type="email" name="email" placeholder="you@example.com" required>
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-lock"></i> Password *</label>
+          <input type="password" name="password" placeholder="Min 6 characters" required minlength="6">
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-phone"></i> Phone</label>
+          <input type="tel" name="phone" placeholder="+91 98765 43210">
+        </div>
+
+        <!-- NGO field (hidden by default) -->
+        <div class="form-group" id="orgField" style="display:none">
+          <label><i class="fas fa-building"></i> Organisation Name</label>
+          <input type="text" name="org_name" id="orgName" placeholder="Your NGO / Organisation name">
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:13px; margin-top:4px">
+          <i class="fas fa-user-plus"></i> Create Account
+        </button>
+      </div>
+    </form>
+
+    <div style="text-align:center; margin-top:18px; padding-top:18px; border-top:1px solid var(--border)">
+      <p style="color:var(--text-muted); font-size:.875rem">
+        Already have an account? <a href="{{ url_for('login') }}" style="font-weight:600">Sign in</a>
+      </p>
+    </div>
+  </div>
+
+  <div style="text-align:center; margin-top:16px">
+    <a href="{{ url_for('index') }}" style="color:var(--text-muted); font-size:.85rem">
+      <i class="fas fa-arrow-left"></i> Back to Home
+    </a>
+  </div>
+</div>
+
+<script>
+  // Toggle NGO org field and radio styles
+  document.querySelectorAll('input[name="role"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      const isNgo = radio.value === 'ngo';
+      document.getElementById('orgField').style.display = isNgo ? 'flex' : 'none';
+      document.getElementById('orgName').required = isNgo;
+
+      const lblDonor = document.getElementById('lbl-donor');
+      const lblNgo   = document.getElementById('lbl-ngo');
+      if (isNgo) {
+        lblNgo.style.cssText   += '; background:rgba(34,197,94,.1); border-color:var(--green); color:var(--green)';
+        lblDonor.style.cssText += '; background:var(--surface2); border-color:var(--border); color:var(--text-muted)';
+      } else {
+        lblDonor.style.cssText += '; background:rgba(34,197,94,.1); border-color:var(--green); color:var(--green)';
+        lblNgo.style.cssText   += '; background:var(--surface2); border-color:var(--border); color:var(--text-muted)';
+      }
+    });
+  });
+</script>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

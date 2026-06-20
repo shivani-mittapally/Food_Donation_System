@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pending Donations — FoodDonate</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+<div class="layout">
+  {% set active_page = 'pending' %}
+  {% include 'sidebar_base.html' %}
+  <div class="main-content">
+    <header class="topbar">
+      <div style="display:flex; align-items:center; gap:12px">
+        <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+        <span class="topbar-title">{{ t('pending','title') }}</span>
+      </div>
+    </header>
+    <div class="flash-container">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in messages %}
+          <div class="alert alert-{{ cat }}"><i class="fas fa-info-circle"></i> {{ msg }}</div>
+        {% endfor %}
+      {% endwith %}
+    </div>
+    <div class="page-body">
+      <!-- Search + Location Filter -->
+      <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:14px; align-items:center">
+        <form class="search-bar" style="flex:1; min-width:200px" method="GET">
+          <i class="fas fa-search"></i>
+          <input type="text" name="search" placeholder="{{ t('pending','search_placeholder') }}" value="{{ search }}">
+          <input type="hidden" name="priority" value="{{ priority_filter }}">
+          <input type="hidden" name="location" value="{{ location_filter }}">
+        </form>
+        <!-- Location filter -->
+        <form class="search-bar" style="flex:1; min-width:180px" method="GET">
+          <i class="fas fa-map-marker-alt" style="color:var(--green)"></i>
+          <input type="text" name="location" placeholder="Filter by city / area…" value="{{ location_filter }}">
+          <input type="hidden" name="search" value="{{ search }}">
+          <input type="hidden" name="priority" value="{{ priority_filter }}">
+        </form>
+      </div>
+
+      {% if location_filter %}
+      <div class="search-result-label" style="margin-bottom:10px">
+        <i class="fas fa-map-marker-alt"></i> Filtering by location: <strong>{{ location_filter }}</strong>
+        <a href="?search={{ search }}&priority={{ priority_filter }}" style="margin-left:8px;color:var(--red);font-size:.8rem">
+          <i class="fas fa-times"></i> clear
+        </a>
+      </div>
+      {% endif %}
+
+      <div class="priority-filter-bar">
+        <span class="pf-label"><i class="fas fa-filter"></i> {{ t('pending','priority') }}:</span>
+        <a href="?search={{ search }}&priority=all&location={{ location_filter }}" class="pf-btn {% if priority_filter == 'all' %}active-all{% endif %}">
+          <i class="fas fa-th-large"></i> {{ t('pending','all') }}
+        </a>
+        <a href="?search={{ search }}&priority=normal&location={{ location_filter }}" class="pf-btn {% if priority_filter == 'normal' %}active-normal{% endif %}">
+          🟢 {{ t('pending','normal') }}
+        </a>
+        <a href="?search={{ search }}&priority=urgent&location={{ location_filter }}" class="pf-btn {% if priority_filter == 'urgent' %}active-urgent{% endif %}">
+          🟡 {{ t('pending','urgent') }}
+        </a>
+        <a href="?search={{ search }}&priority=emergency&location={{ location_filter }}" class="pf-btn {% if priority_filter == 'emergency' %}active-emergency{% endif %}">
+          🔴 {{ t('pending','emergency') }}
+        </a>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h4><i class="fas fa-clock" style="color:var(--amber)"></i> {{ t('pending','title') }}
+            <span style="background:rgba(245,158,11,.15); color:var(--amber); border-radius:20px; padding:2px 10px; font-size:.78rem; margin-left:8px">{{ donations|length }}</span>
+          </h4>
+        </div>
+        <div class="table-wrap">
+          {% if donations %}
+          <table>
+            <thead>
+              <tr>
+                <th>{{ t('pending','col_priority') }}</th>
+                <th>#</th>
+                <th>{{ t('pending','col_food') }}</th>
+                <th>{{ t('pending','col_qty') }}</th>
+                <th>{{ t('pending','col_donor') }}</th>
+                <th>{{ t('pending','col_address') }}</th>
+                <th>{{ t('pending','col_expiry') }}</th>
+                <th>{{ t('pending','col_status') }}</th>
+                <th>{{ t('pending','col_date') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for d in donations %}
+              <tr class="{% if d.priority == 'emergency' %}row-emergency{% elif d.priority == 'urgent' %}row-urgent{% endif %}">
+                <td>
+                  <span class="priority-badge priority-{{ d.priority or 'normal' }}">
+                    {% if d.priority == 'emergency' %}🔴{% elif d.priority == 'urgent' %}🟡{% else %}🟢{% endif %}
+                    {{ (d.priority or 'normal') | title }}
+                  </span>
+                </td>
+                <td style="color:var(--text-muted)">{{ d.id }}</td>
+                <td><strong>{{ d.food_type }}</strong></td>
+                <td>{{ d.quantity }}</td>
+                <td>{{ d.donor_name }}</td>
+                <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.82rem">
+                  {% if d.city %}<span style="color:var(--green);font-size:.75rem"><i class="fas fa-city"></i> {{ d.city }} · </span>{% endif %}
+                  {{ d.address }}
+                </td>
+                <td>
+                  {% if d.expiry_time %}
+                    <span data-expiry="{{ d.expiry_time }}" style="font-size:.8rem">{{ d.expiry_time[:16] }}</span>
+                  {% else %}—{% endif %}
+                </td>
+                <td><span class="badge badge-{{ d.status }}">{{ d.status }}</span></td>
+                <td style="color:var(--text-muted);font-size:.8rem">{{ d.created_at[:10] }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <div style="text-align:center;padding:48px;color:var(--text-muted)">
+            <div style="font-size:3rem;margin-bottom:12px">📭</div>
+            <p>{{ t('pending','no_pending') }}</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

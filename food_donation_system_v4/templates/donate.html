@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Donate Food — FoodDonate</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+<div class="layout">
+  {% set active_page = 'donate' %}
+  {% include 'sidebar_base.html' %}
+
+  <div class="main-content">
+    <header class="topbar">
+      <div style="display:flex; align-items:center; gap:12px">
+        <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+        <span class="topbar-title">{{ t('donate','title') }}</span>
+      </div>
+      <div class="topbar-actions">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline btn-sm">
+          <i class="fas fa-arrow-left"></i> Back
+        </a>
+      </div>
+    </header>
+
+    <div class="flash-container">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in messages %}
+          <div class="alert alert-{{ cat }}"><i class="fas fa-info-circle"></i> {{ msg }}</div>
+        {% endfor %}
+      {% endwith %}
+    </div>
+
+    <div class="page-body">
+      <div style="max-width:760px">
+        <div style="margin-bottom:24px">
+          <h2 style="font-size:1.5rem">🍱 Share Food</h2>
+          <p style="color:var(--text-muted); font-size:.875rem">Fill in the details below to list your food donation.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-body">
+            <form method="POST" action="{{ url_for('donate') }}" enctype="multipart/form-data">
+              <div class="form-grid form-grid-2">
+
+                <div class="form-group">
+                  <label><i class="fas fa-utensils"></i> Food Type *</label>
+                  <input type="text" name="food_type" placeholder="e.g. Rice & Dal, Bread, Fruits" required>
+                </div>
+
+                <div class="form-group">
+                  <label><i class="fas fa-tag"></i> Food Category *</label>
+                  <select name="category" required class="form-select">
+                    {% for cat in food_categories %}
+                    <option value="{{ cat }}">{{ cat }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label><i class="fas fa-weight-hanging"></i> Quantity *</label>
+                  <input type="text" name="quantity" placeholder="e.g. 5 kg, 20 servings, 3 boxes" required>
+                </div>
+
+                <!-- PRIORITY SELECTOR -->
+                <div class="form-group" style="grid-column:1/-1">
+                  <label><i class="fas fa-flag"></i> Donation Priority *</label>
+                  <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:8px">
+                    <label class="priority-option-card" id="pcard-normal">
+                      <input type="radio" name="priority" value="normal" checked onchange="updatePriorityCard()">
+                      <div class="poc-inner">
+                        <span class="poc-icon">🟢</span>
+                        <strong>Normal</strong>
+                        <small>Standard pickup</small>
+                      </div>
+                    </label>
+                    <label class="priority-option-card" id="pcard-urgent">
+                      <input type="radio" name="priority" value="urgent" onchange="updatePriorityCard()">
+                      <div class="poc-inner">
+                        <span class="poc-icon">🟡</span>
+                        <strong>Urgent</strong>
+                        <small>Expiring soon</small>
+                      </div>
+                    </label>
+                    <label class="priority-option-card" id="pcard-emergency">
+                      <input type="radio" name="priority" value="emergency" onchange="updatePriorityCard()">
+                      <div class="poc-inner">
+                        <span class="poc-icon">🔴</span>
+                        <strong>Emergency</strong>
+                        <small>Critical — needs immediate pickup</small>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="form-group" style="grid-column:1/-1">
+                  <label><i class="fas fa-map-marker-alt"></i> Pickup Address *</label>
+                  <textarea name="address" rows="3" placeholder="Full address for pickup..." required></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label><i class="fas fa-city"></i> City / Area <span style="color:var(--text-muted);font-size:.8rem">(for location search)</span></label>
+                  <input type="text" name="city" placeholder="e.g. Anna Nagar, Velachery, T. Nagar">
+                </div>
+
+                <div class="form-group">
+                  <label><i class="fas fa-phone"></i> Contact Phone *</label>
+                  <input type="tel" name="phone" placeholder="+91 98765 43210" required>
+                </div>
+
+                <div class="form-group">
+                  <label><i class="fas fa-fire"></i> Cooking Time</label>
+                  <input type="datetime-local" name="cooking_time">
+                </div>
+
+                <div class="form-group">
+                  <label><i class="fas fa-hourglass-end"></i> Expiry / Best Before</label>
+                  <input type="datetime-local" name="expiry_time">
+                </div>
+
+                <div class="form-group" style="grid-column:1/-1">
+                  <label><i class="fas fa-image"></i> Food Photo (optional)</label>
+                  <input type="file" name="image" accept="image/*" onchange="previewImage(this)">
+                  <img id="imagePreview" src="#" alt="Preview" style="display:none; margin-top:12px; max-height:200px; border-radius:8px; border:1px solid var(--border)">
+                </div>
+
+                <div class="form-group" style="grid-column:1/-1">
+                  <label><i class="fas fa-comment"></i> Additional Notes</label>
+                  <textarea name="message" rows="3" placeholder="Any special instructions, dietary info, etc…"></textarea>
+                </div>
+
+              </div>
+
+              <div id="emergency-note" style="display:none; margin-top:16px; background:rgba(239,68,68,.08); border:1px solid rgba(239,68,68,.3); border-radius:8px; padding:14px 18px; font-size:.85rem; color:var(--red)">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>Emergency Priority:</strong> This donation will be pinned to the top of all dashboards and NGOs will be alerted immediately.
+              </div>
+
+              <div style="margin-top:20px; background:rgba(20,184,166,.06); border:1px solid rgba(20,184,166,.2); border-radius:8px; padding:14px 18px; font-size:.85rem; color:var(--teal)">
+                <i class="fas fa-robot"></i>
+                <strong>AI Quality Check:</strong> Our system will estimate food freshness and suitability based on cooking and expiry times.
+              </div>
+
+              <div style="display:flex; gap:12px; margin-top:24px">
+                <button type="submit" class="btn btn-primary" style="flex:1; justify-content:center; padding:13px">
+                  <i class="fas fa-paper-plane"></i> Submit Donation
+                </button>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline" style="padding:13px 20px">Cancel</a>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.priority-option-card {
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all .2s;
+  overflow: hidden;
+}
+.priority-option-card:hover { border-color: var(--green); }
+.priority-option-card input { display: none; }
+.poc-inner {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 4px; padding: 14px 10px; text-align: center;
+}
+.poc-icon { font-size: 1.5rem; }
+.poc-inner strong { font-size: .9rem; }
+.poc-inner small { font-size: .72rem; color: var(--text-muted); }
+#pcard-normal.selected   { border-color: var(--green);  background: rgba(34,197,94,.08); }
+#pcard-urgent.selected   { border-color: var(--amber);  background: rgba(245,158,11,.08); }
+#pcard-emergency.selected { border-color: var(--red); background: rgba(239,68,68,.08); }
+</style>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+<script>
+function updatePriorityCard() {
+  document.querySelectorAll('.priority-option-card').forEach(card => card.classList.remove('selected'));
+  const checked = document.querySelector('input[name="priority"]:checked');
+  if (checked) {
+    checked.closest('.priority-option-card').classList.add('selected');
+    document.getElementById('emergency-note').style.display = checked.value === 'emergency' ? 'block' : 'none';
+  }
+}
+updatePriorityCard();
+</script>
+</body>
+</html>

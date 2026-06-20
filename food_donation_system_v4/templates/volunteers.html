@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Volunteers — FoodDonate</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+<div class="layout">
+  {% set active_page = 'volunteers' %}
+  {% include 'sidebar_base.html' %}
+
+  <div class="main-content">
+    <header class="topbar">
+      <div style="display:flex; align-items:center; gap:12px">
+        <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+        <span class="topbar-title">{{ t('nav','volunteers') }}</span>
+      </div>
+      <div class="topbar-actions">
+        <a href="{{ url_for('ngo_dashboard') }}" class="btn btn-outline btn-sm"><i class="fas fa-arrow-left"></i> Back</a>
+      </div>
+    </header>
+
+    <div class="flash-container">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in messages %}
+          <div class="alert alert-{{ cat }}"><i class="fas fa-info-circle"></i> {{ msg }}</div>
+        {% endfor %}
+      {% endwith %}
+    </div>
+
+    <div class="page-body">
+      <div style="margin-bottom:24px">
+        <h2 style="font-size:1.5rem">🚴 {{ t('nav','volunteers') }}</h2>
+        <p style="color:var(--text-muted); font-size:.875rem">Manage volunteers and delivery assignments.</p>
+      </div>
+
+      <!-- Volunteer Cards -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header">
+          <h4><i class="fas fa-users" style="color:var(--green)"></i> Volunteers ({{ volunteers|length }})</h4>
+        </div>
+        <div style="padding:16px; display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px">
+          {% for v in volunteers %}
+          <div class="volunteer-card vol-{{ v.status }}">
+            <div class="vol-avatar vol-{{ v.status }}-av">
+              {{ '🚴' if v.vehicle == 'Bike' else '🚗' }}
+            </div>
+            <div class="vol-info">
+              <div class="vol-name">{{ v.name }}</div>
+              <div class="vol-meta">
+                <i class="fas fa-phone" style="font-size:.7rem"></i> {{ v.phone }}
+              </div>
+              <div class="vol-meta" style="margin-top:4px">
+                <span class="vol-status-dot dot-{{ v.status }}"></span>
+                {{ v.status | replace('_',' ') | title }}
+                &nbsp;·&nbsp; {{ v.vehicle }}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Active Assignments -->
+      <div class="card">
+        <div class="card-header">
+          <h4><i class="fas fa-route" style="color:var(--green)"></i> Delivery Assignments</h4>
+        </div>
+        {% if assignments %}
+        <div style="padding:16px; display:flex; flex-direction:column; gap:12px">
+          {% for a in assignments %}
+          <div class="assignment-card">
+            <div class="ac-header">
+              <div>
+                <div class="ac-food">{{ a.food_type }}
+                  <span class="priority-badge priority-{{ a.priority or 'normal' }}" style="margin-left:6px;font-size:.68rem">
+                    {% if a.priority == 'emergency' %}🔴{% elif a.priority == 'urgent' %}🟡{% else %}🟢{% endif %}
+                    {{ (a.priority or 'normal') | title }}
+                  </span>
+                </div>
+                <div style="font-size:.8rem;color:var(--text-muted);margin-top:3px">
+                  Donor: {{ a.donor_name }} &nbsp;·&nbsp; Pickup: {{ a.pickup_addr[:50] }}…
+                </div>
+              </div>
+              <span class="badge badge-{{ a.status if a.status else 'pending' }}">
+                {{ (a.status or 'assigned') | replace('_',' ') | title }}
+              </span>
+            </div>
+
+            <div class="ac-vol">
+              <span class="vol-status-dot dot-{{ 'on_delivery' if a.vol_name else 'unavailable' }}"></span>
+              <strong>{{ a.vol_name or 'Unassigned' }}</strong>
+              {% if a.vol_phone %}<span style="color:var(--text-muted)"> · {{ a.vol_phone }}</span>{% endif %}
+              {% if a.vehicle %}<span style="color:var(--text-muted)"> · {{ a.vehicle }}</span>{% endif %}
+            </div>
+
+            <!-- Progress Timeline -->
+            <div class="progress-timeline" style="margin:14px 0">
+              {% set stages = ['assigned','on_the_way','picked_up','delivered'] %}
+              {% set labels  = {'assigned':'Assigned','on_the_way':'On the Way','picked_up':'Picked Up','delivered':'Delivered'} %}
+              {% set icons   = {'assigned':'📋','on_the_way':'🚴','picked_up':'📦','delivered':'✅'} %}
+              {% set cur = a.status or 'assigned' %}
+              {% set cur_idx = stages.index(cur) if cur in stages else 0 %}
+              {% for i in range(stages|length) %}
+              {% set stage = stages[i] %}
+              <div class="pt-step {% if i < cur_idx %}completed{% elif i == cur_idx %}active{% endif %}">
+                <div class="pt-circle">
+                  {% if i < cur_idx %}<i class="fas fa-check" style="font-size:.65rem"></i>
+                  {% elif i == cur_idx %}<span style="font-size:.75rem">{{ icons[stage] }}</span>
+                  {% else %}<span style="font-size:.65rem">{{ i+1 }}</span>{% endif %}
+                </div>
+                <div class="pt-label">{{ labels[stage] }}</div>
+              </div>
+              {% endfor %}
+            </div>
+
+            <!-- Action buttons -->
+            <div class="ac-actions">
+              {% if a.status == 'assigned' %}
+                <a href="{{ url_for('update_assignment', assign_id=a.id, status='on_the_way') }}" class="btn btn-outline btn-sm">
+                  <i class="fas fa-motorcycle"></i> On the Way
+                </a>
+              {% elif a.status == 'on_the_way' %}
+                <a href="{{ url_for('update_assignment', assign_id=a.id, status='picked_up') }}" class="btn btn-teal btn-sm">
+                  <i class="fas fa-box"></i> Picked Up
+                </a>
+              {% elif a.status == 'picked_up' %}
+                <a href="{{ url_for('update_assignment', assign_id=a.id, status='delivered') }}" class="btn btn-primary btn-sm">
+                  <i class="fas fa-check-double"></i> Delivered
+                </a>
+              {% else %}
+                <span style="color:var(--green);font-size:.85rem"><i class="fas fa-check-circle"></i> Delivery Complete</span>
+              {% endif %}
+              {% if a.assigned_at %}
+              <span style="color:var(--text-muted);font-size:.75rem;margin-left:auto;align-self:center">
+                Assigned {{ a.assigned_at[:16] }}
+              </span>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align:center; padding:48px; color:var(--text-muted)">
+          <div style="font-size:3rem; margin-bottom:12px">📋</div>
+          <p>No assignments yet. Assign volunteers from the NGO dashboard.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

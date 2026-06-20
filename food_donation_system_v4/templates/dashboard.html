@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — FoodDonate</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<div class="layout">
+  {% set active_page = 'dashboard' %}
+  {% include 'sidebar_base.html' %}
+
+  <div class="main-content">
+    <header class="topbar">
+      <div style="display:flex; align-items:center; gap:12px">
+        <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+        <span class="topbar-title">Dashboard</span>
+      </div>
+      <div class="topbar-actions">
+        <div class="notif-btn" title="Notifications">
+          <i class="fas fa-bell"></i>
+          {% if notif_count > 0 %}<span class="notif-badge">{{ notif_count }}</span>{% endif %}
+        </div>
+        <a href="{{ url_for('donate') }}" class="btn btn-primary btn-sm">
+          <i class="fas fa-plus"></i> New Donation
+        </a>
+      </div>
+    </header>
+
+    <div class="flash-container">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in messages %}
+          <div class="alert alert-{{ cat }}"><i class="fas fa-info-circle"></i> {{ msg }}</div>
+        {% endfor %}
+      {% endwith %}
+    </div>
+
+    <div class="page-body">
+      <div style="margin-bottom:24px">
+        <h2 style="font-size:1.5rem">Hello, {{ session.user_name }} 👋</h2>
+        <p style="color:var(--text-muted); font-size:.875rem">Here's your donation activity at a glance.</p>
+      </div>
+
+      <!-- Emergency Banner -->
+      {% set emergency_count = donations | selectattr('priority','equalto','emergency') | selectattr('status','equalto','pending') | list | length %}
+      {% if emergency_count > 0 %}
+      <div class="emergency-banner">
+        <div class="eb-icon">🚨</div>
+        <div class="eb-text">
+          <strong>{{ emergency_count }} Emergency Donation{{ 's' if emergency_count > 1 else '' }} Need Immediate Pickup!</strong>
+          <p>These donations are at critical priority — they appear at the top of all NGO dashboards.</p>
+        </div>
+        <a href="{{ url_for('pending') }}?priority=emergency" class="btn btn-sm" style="background:var(--red);color:#fff;margin-left:auto;flex-shrink:0">View Now</a>
+      </div>
+      {% endif %}
+
+      <!-- Stats cards -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon icon-green"><i class="fas fa-box-open"></i></div>
+          <div class="stat-info"><h3>{{ stats.total }}</h3><p>Total Donations</p></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon icon-amber"><i class="fas fa-clock"></i></div>
+          <div class="stat-info"><h3>{{ stats.pending }}</h3><p>Pending</p></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon icon-blue"><i class="fas fa-truck"></i></div>
+          <div class="stat-info"><h3>{{ stats.accepted }}</h3><p>In Progress</p></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon icon-teal"><i class="fas fa-check-circle"></i></div>
+          <div class="stat-info"><h3>{{ stats.delivered }}</h3><p>Delivered</p></div>
+        </div>
+        {% if stats.emergency > 0 %}
+        <div class="stat-card stat-emergency">
+          <div class="stat-icon" style="background:rgba(239,68,68,.15);color:var(--red)"><i class="fas fa-exclamation-triangle"></i></div>
+          <div class="stat-info"><h3 style="color:var(--red)">{{ stats.emergency }}</h3><p>Emergency</p></div>
+        </div>
+        {% endif %}
+        {% if stats.urgent > 0 %}
+        <div class="stat-card stat-urgent">
+          <div class="stat-icon" style="background:rgba(245,158,11,.15);color:var(--amber)"><i class="fas fa-bolt"></i></div>
+          <div class="stat-info"><h3 style="color:var(--amber)">{{ stats.urgent }}</h3><p>Urgent</p></div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Charts -->
+      <div class="chart-grid">
+        <div class="card">
+          <div class="card-header"><h4><i class="fas fa-chart-donut" style="color:var(--green)"></i> Donation Status</h4></div>
+          <div class="card-body chart-box"><canvas id="statusChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h4><i class="fas fa-chart-bar" style="color:var(--teal)"></i> Monthly Activity</h4></div>
+          <div class="card-body chart-box"><canvas id="monthlyChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Recent Donations Table -->
+      <div class="card">
+        <div class="card-header">
+          <h4><i class="fas fa-list" style="color:var(--green)"></i> Recent Donations</h4>
+          <a href="{{ url_for('donate') }}" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Donate</a>
+        </div>
+        <div class="table-wrap">
+          {% if donations %}
+          <table>
+            <thead>
+              <tr>
+                <th>#</th><th>Food Type</th><th>Quantity</th><th>Priority</th>
+                <th>Expiry</th><th>Status</th><th>Date</th><th>QR</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for d in donations[:10] %}
+              <tr class="{% if d.priority == 'emergency' %}row-emergency{% elif d.priority == 'urgent' %}row-urgent{% endif %}">
+                <td style="color:var(--text-muted)">{{ d.id }}</td>
+                <td>
+                  <strong>{{ d.food_type }}</strong>
+                  <span style="display:inline-block;background:rgba(99,102,241,.12);color:#6366f1;border-radius:10px;font-size:.68rem;padding:1px 7px;margin-left:4px">{{ d.category or '—' }}</span>
+                </td>
+                <td>{{ d.quantity }}</td>
+                <td>
+                  <span class="priority-badge priority-{{ d.priority or 'normal' }}">
+                    {% if d.priority == 'emergency' %}🔴{% elif d.priority == 'urgent' %}🟡{% else %}🟢{% endif %}
+                    {{ (d.priority or 'normal') | title }}
+                  </span>
+                </td>
+                <td>
+                  {% if d.expiry_time %}
+                    <span data-expiry="{{ d.expiry_time }}" style="font-size:.8rem">{{ d.expiry_time }}</span>
+                  {% else %}—{% endif %}
+                </td>
+                <td><span class="badge badge-{{ d.status }}">{{ d.status }}</span></td>
+                <td style="color:var(--text-muted); font-size:.8rem">{{ d.created_at[:10] }}</td>
+                <td>
+                  <a href="{{ url_for('generate_qr', don_id=d.id) }}" target="_blank" class="btn btn-outline btn-sm" title="QR Code">
+                    <i class="fas fa-qrcode"></i>
+                  </a>
+                  {% if d.ngo_id %}
+                  <a href="{{ url_for('chat', don_id=d.id) }}" class="btn btn-sm" style="background:rgba(99,102,241,.12);color:#6366f1;border:1px solid rgba(99,102,241,.3)" title="Chat with NGO">
+                    <i class="fas fa-comments"></i>
+                  </a>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <div style="text-align:center; padding:48px; color:var(--text-muted)">
+            <div style="font-size:3rem; margin-bottom:12px">🍽️</div>
+            <p>No donations yet.</p>
+            <a href="{{ url_for('donate') }}" class="btn btn-primary" style="margin-top:16px">Make your first donation</a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Notifications -->
+      {% if notifications %}
+      <div class="card" style="margin-top:20px">
+        <div class="card-header"><h4><i class="fas fa-bell" style="color:var(--amber)"></i> Notifications</h4></div>
+        <div class="card-body">
+          <div class="notif-list">
+            {% for n in notifications %}
+            <div class="notif-item">
+              <i class="fas fa-info-circle ni-icon"></i>
+              <div>
+                <div>{{ n.message }}</div>
+                <div class="ni-time">{{ n.created_at }}</div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

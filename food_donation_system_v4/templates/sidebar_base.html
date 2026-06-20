@@ -1,0 +1,62 @@
+{# sidebar_base.html — v3: Multi-language support, removed volunteer live tracking #}
+
+<div id="sidebarOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:99"></div>
+<style>
+  #sidebarOverlay.active { display:block !important; }
+</style>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">🍱</div>
+    <h2>FoodDonate</h2>
+    <small>{{ session.user_role | title }} Panel</small>
+  </div>
+
+  <nav class="sidebar-nav">
+    {% if session.user_role == 'admin' %}
+      <div class="nav-section-label">Admin</div>
+      <a href="{{ url_for('admin') }}"    class="nav-link {% if active_page=='admin'    %}active{% endif %}"><i class="fas fa-chart-pie"></i> {{ t('nav','admin_panel') }}</a>
+      <a href="{{ url_for('previous') }}" class="nav-link {% if active_page=='previous' %}active{% endif %}"><i class="fas fa-history"></i> {{ t('nav','all_donations') }}</a>
+      <a href="{{ url_for('pending') }}"  class="nav-link {% if active_page=='pending'  %}active{% endif %}"><i class="fas fa-clock"></i> {{ t('nav','pending') }}</a>
+      <a href="{{ url_for('volunteers') }}" class="nav-link {% if active_page=='volunteers' %}active{% endif %}"><i class="fas fa-user-check"></i> {{ t('nav','volunteers') }}</a>
+    {% elif session.user_role == 'ngo' %}
+      <div class="nav-section-label">NGO</div>
+      <a href="{{ url_for('ngo_dashboard') }}" class="nav-link {% if active_page=='ngo'      %}active{% endif %}"><i class="fas fa-hands-helping"></i> {{ t('nav','ngo_dashboard') }}</a>
+      <a href="{{ url_for('pending') }}"       class="nav-link {% if active_page=='pending'  %}active{% endif %}"><i class="fas fa-clock"></i> {{ t('nav','available_food') }}</a>
+      <a href="{{ url_for('volunteers') }}"    class="nav-link {% if active_page=='volunteers' %}active{% endif %}"><i class="fas fa-user-check"></i> {{ t('nav','volunteers') }}</a>
+      <a href="{{ url_for('previous') }}"      class="nav-link {% if active_page=='previous' %}active{% endif %}"><i class="fas fa-history"></i> {{ t('nav','history') }}</a>
+    {% else %}
+      <div class="nav-section-label">Donor</div>
+      <a href="{{ url_for('dashboard') }}" class="nav-link {% if active_page=='dashboard' %}active{% endif %}"><i class="fas fa-home"></i> {{ t('nav','dashboard') }}</a>
+      <a href="{{ url_for('donate') }}"    class="nav-link {% if active_page=='donate'    %}active{% endif %}"><i class="fas fa-plus-circle"></i> {{ t('nav','donate') }}</a>
+      <a href="{{ url_for('pending') }}"   class="nav-link {% if active_page=='pending'   %}active{% endif %}"><i class="fas fa-clock"></i> {{ t('nav','pending') }}</a>
+      <a href="{{ url_for('previous') }}"  class="nav-link {% if active_page=='previous'  %}active{% endif %}"><i class="fas fa-history"></i> {{ t('nav','history') }}</a>
+    {% endif %}
+
+    <div class="nav-section-label" style="margin-top:8px">Account</div>
+    <a href="{{ url_for('profile') }}" class="nav-link {% if active_page=='profile' %}active{% endif %}"><i class="fas fa-user-circle"></i> {{ t('nav','profile') }}</a>
+    <a href="{{ url_for('index') }}"   class="nav-link"><i class="fas fa-globe"></i> {{ t('nav','home') }}</a>
+    <a href="{{ url_for('logout') }}"  class="nav-link" style="color:var(--red)"><i class="fas fa-sign-out-alt"></i> {{ t('nav','logout') }}</a>
+
+    <!-- Language Switcher -->
+    <div class="nav-section-label" style="margin-top:8px">{{ t('common','language') }}</div>
+    <div class="lang-switcher-sidebar">
+      {% for code, name in supported_langs.items() %}
+        <a href="{{ url_for('set_lang', lang=code) }}"
+           class="lang-btn {% if current_lang == code %}lang-active{% endif %}">
+          {{ name }}
+        </a>
+      {% endfor %}
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-pill">
+      <div class="user-avatar">{{ session.user_name[0] | upper if session.user_name else 'U' }}</div>
+      <div class="user-info">
+        <div style="font-weight:600; font-size:.875rem">{{ session.user_name }}</div>
+        <small>{{ session.user_role | title }}</small>
+      </div>
+    </div>
+  </div>
+</aside>

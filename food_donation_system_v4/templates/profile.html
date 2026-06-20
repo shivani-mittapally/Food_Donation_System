@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile — FoodDonate</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+<div class="layout">
+  {% set active_page = 'profile' %}
+  {% include 'sidebar_base.html' %}
+
+  <div class="main-content">
+    <header class="topbar">
+      <div style="display:flex; align-items:center; gap:12px">
+        <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+        <span class="topbar-title">My Profile</span>
+      </div>
+    </header>
+
+    <div class="flash-container">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in messages %}
+          <div class="alert alert-{{ cat }}"><i class="fas fa-info-circle"></i> {{ msg }}</div>
+        {% endfor %}
+      {% endwith %}
+    </div>
+
+    <div class="page-body">
+      <div style="max-width:640px">
+
+        <!-- Profile header -->
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-body">
+            <div class="profile-header">
+              <div class="profile-avatar">{{ user.name[0]|upper }}</div>
+              <div>
+                <h2 style="font-size:1.4rem">{{ user.name }}</h2>
+                <p style="color:var(--text-muted); font-size:.875rem">{{ user.email }}</p>
+                <span class="badge badge-{{ 'delivered' if user.role == 'admin' else ('accepted' if user.role == 'ngo' else 'pending') }}"
+                      style="margin-top:6px">
+                  {{ user.role | title }}
+                </span>
+              </div>
+            </div>
+
+            <div class="stats-grid" style="margin:0; grid-template-columns:1fr 1fr">
+              <div class="stat-card">
+                <div class="stat-icon icon-green"><i class="fas fa-box-open"></i></div>
+                <div class="stat-info"><h3>{{ total }}</h3><p>Total Donations</p></div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-icon icon-teal"><i class="fas fa-check-double"></i></div>
+                <div class="stat-info"><h3>{{ delivered }}</h3><p>Delivered</p></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Edit form -->
+        <div class="card">
+          <div class="card-header"><h4><i class="fas fa-edit" style="color:var(--green)"></i> Edit Profile</h4></div>
+          <div class="card-body">
+            <form method="POST" action="{{ url_for('profile') }}">
+              <div class="form-grid" style="gap:16px">
+                <div class="form-group">
+                  <label><i class="fas fa-user"></i> Full Name</label>
+                  <input type="text" name="name" value="{{ user.name }}" required>
+                </div>
+                <div class="form-group">
+                  <label><i class="fas fa-envelope"></i> Email (read-only)</label>
+                  <input type="email" value="{{ user.email }}" disabled style="opacity:.5">
+                </div>
+                <div class="form-group">
+                  <label><i class="fas fa-phone"></i> Phone</label>
+                  <input type="tel" name="phone" value="{{ user.phone or '' }}" placeholder="+91 98765 43210">
+                </div>
+                <div class="form-group">
+                  <label><i class="fas fa-map-marker-alt"></i> Address</label>
+                  <textarea name="address" rows="3" placeholder="Your address">{{ user.address or '' }}</textarea>
+                </div>
+                <div class="form-group">
+                  <label><i class="fas fa-calendar-alt"></i> Member Since</label>
+                  <input type="text" value="{{ user.created_at[:10] }}" disabled style="opacity:.5">
+                </div>
+                <button type="submit" class="btn btn-primary" style="justify-content:center; padding:12px">
+                  <i class="fas fa-save"></i> Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

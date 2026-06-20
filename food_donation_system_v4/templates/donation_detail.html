@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Donation #{{ d.id }} — FoodDonate</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body style="background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; padding:32px; min-height:100vh; display:flex; align-items:center; justify-content:center">
+
+<div style="max-width:560px; width:100%">
+  <div style="text-align:center; margin-bottom:24px">
+    <div style="font-size:2rem; margin-bottom:8px">🍱</div>
+    <h1 style="font-family:'Syne',sans-serif; font-size:1.6rem">Donation Tracker</h1>
+    <p style="color:var(--text-muted)">Donation #{{ d.id }}</p>
+  </div>
+
+  <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden">
+    <!-- Status banner -->
+    <div style="padding:20px 24px; background:{% if d.status=='delivered' %}rgba(34,197,94,.12){% elif d.status=='pending' %}rgba(245,158,11,.12){% else %}rgba(59,130,246,.12){% endif %}; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center">
+      <div>
+        <div style="font-size:.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin-bottom:4px">Status</div>
+        <span class="badge badge-{{ d.status }}" style="font-size:.9rem; padding:6px 16px">{{ d.status | title }}</span>
+      </div>
+      <img src="{{ url_for('generate_qr', don_id=d.id) }}" class="qr-img" width="80" height="80" alt="QR">
+    </div>
+
+    <div style="padding:24px">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px">
+        <div>
+          <div style="font-size:.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin-bottom:4px">Food Type</div>
+          <strong>{{ d.food_type }}</strong>
+        </div>
+        <div>
+          <div style="font-size:.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin-bottom:4px">Quantity</div>
+          <strong>{{ d.quantity }}</strong>
+        </div>
+        <div>
+          <div style="font-size:.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin-bottom:4px">Donor</div>
+          {{ d.donor_name }}
+        </div>
+        <div>
+          <div style="font-size:.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin-bottom:4px">Phone</div>
+          {{ d.phone }}
+        </div>
+        <div style="grid-column:1/-1">
+          <div style="font-size:.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin-bottom:4px">Pickup Address</div>
+          {{ d.address }}
+        </div>
+        {% if d.expiry_time %}
+        <div>
+          <div style="font-size:.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin-bottom:4px">Expiry</div>
+          <span data-expiry="{{ d.expiry_time }}">{{ d.expiry_time[:16] }}</span>
+        </div>
+        {% endif %}
+        <div>
+          <div style="font-size:.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin-bottom:4px">Submitted</div>
+          {{ d.created_at[:16] }}
+        </div>
+        {% if d.message %}
+        <div style="grid-column:1/-1">
+          <div style="font-size:.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin-bottom:4px">Notes</div>
+          {{ d.message }}
+        </div>
+        {% endif %}
+      </div>
+
+      {% if d.image_path %}
+      <div style="margin-top:20px">
+        <img src="{{ url_for('static', filename='images/' + d.image_path) }}"
+             style="width:100%; border-radius:8px; border:1px solid var(--border); max-height:260px; object-fit:cover">
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div style="text-align:center; margin-top:20px">
+    <a href="{{ url_for('index') }}" style="color:var(--text-muted); font-size:.875rem">
+      <i class="fas fa-home"></i> Back to Home
+    </a>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

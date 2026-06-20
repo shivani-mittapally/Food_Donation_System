@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NGO Dashboard — FoodDonate</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+<div class="layout">
+  {% set active_page = 'ngo' %}
+  {% include 'sidebar_base.html' %}
+
+  <div class="main-content">
+    <header class="topbar">
+      <div style="display:flex; align-items:center; gap:12px">
+        <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+        <span class="topbar-title">NGO Dashboard</span>
+      </div>
+      <div class="topbar-actions">
+        <a href="{{ url_for('volunteers') }}" class="btn btn-outline btn-sm">
+          <i class="fas fa-user-check"></i> Volunteers
+        </a>
+        <div class="notif-btn"><i class="fas fa-bell"></i>
+          {% if notif_count > 0 %}<span class="notif-badge">{{ notif_count }}</span>{% endif %}
+        </div>
+      </div>
+    </header>
+
+    <div class="flash-container">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in messages %}
+          <div class="alert alert-{{ cat }}"><i class="fas fa-info-circle"></i> {{ msg }}</div>
+        {% endfor %}
+      {% endwith %}
+    </div>
+
+    <div class="page-body">
+      <div style="margin-bottom:24px">
+        <h2 style="font-size:1.5rem">Welcome, {{ session.user_name }} 🤝</h2>
+        <p style="color:var(--text-muted); font-size:.875rem">Accept and manage food donations from your community.</p>
+      </div>
+
+      <!-- Emergency Banner -->
+      {% if stats.emergency > 0 %}
+      <div class="emergency-banner">
+        <div class="eb-icon">🚨</div>
+        <div class="eb-text">
+          <strong>{{ stats.emergency }} EMERGENCY donation{{ 's require' if stats.emergency > 1 else ' requires' }} immediate action!</strong>
+          <p>These are time-critical and need pickup within the hour.</p>
+        </div>
+        <a href="?priority=emergency" class="btn btn-sm" style="background:var(--red);color:#fff;margin-left:auto;flex-shrink:0;white-space:nowrap">
+          <i class="fas fa-exclamation"></i> View Emergency
+        </a>
+      </div>
+      {% endif %}
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon icon-amber"><i class="fas fa-box"></i></div>
+          <div class="stat-info"><h3>{{ stats.available }}</h3><p>Available to Accept</p></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon icon-blue"><i class="fas fa-handshake"></i></div>
+          <div class="stat-info"><h3>{{ stats.accepted }}</h3><p>Accepted by You</p></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon icon-teal"><i class="fas fa-truck"></i></div>
+          <div class="stat-info"><h3>{{ stats.collected }}</h3><p>Collected</p></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon icon-green"><i class="fas fa-check-double"></i></div>
+          <div class="stat-info"><h3>{{ stats.delivered }}</h3><p>Delivered</p></div>
+        </div>
+        {% if stats.emergency > 0 %}
+        <div class="stat-card stat-emergency">
+          <div class="stat-icon" style="background:rgba(239,68,68,.15);color:var(--red)"><i class="fas fa-exclamation-triangle"></i></div>
+          <div class="stat-info"><h3 style="color:var(--red)">{{ stats.emergency }}</h3><p>Emergency</p></div>
+        </div>
+        {% endif %}
+        {% if stats.urgent > 0 %}
+        <div class="stat-card stat-urgent">
+          <div class="stat-icon" style="background:rgba(245,158,11,.15);color:var(--amber)"><i class="fas fa-bolt"></i></div>
+          <div class="stat-info"><h3 style="color:var(--amber)">{{ stats.urgent }}</h3><p>Urgent</p></div>
+        </div>
+        {% endif %}
+      </div>
+
+
+
+      <!-- Location Filter -->
+      <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px; align-items:center">
+        <form class="search-bar" style="flex:1; min-width:220px" method="GET">
+          <i class="fas fa-map-marker-alt" style="color:var(--green)"></i>
+          <input type="text" name="location" placeholder="Filter by city or area…" value="{{ location_filter }}">
+          <input type="hidden" name="priority" value="{{ priority_filter }}">
+          <input type="hidden" name="category" value="{{ category_filter }}">
+          {% if location_filter %}
+          <a href="?priority={{ priority_filter }}&category={{ category_filter }}" style="color:var(--text-muted); padding:2px 6px; border-radius:50%; text-decoration:none" title="Clear">
+            <i class="fas fa-times"></i>
+          </a>
+          {% endif %}
+        </form>
+        {% if location_filter %}
+        <div class="search-result-label">
+          <i class="fas fa-map-marker-alt"></i> {{ location_filter }} — {{ pending|length }} found
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Priority Filter -->
+      <div class="priority-filter-bar">
+        <span class="pf-label"><i class="fas fa-bolt"></i> Priority:</span>
+        <a href="?category={{ category_filter }}&location={{ location_filter }}" class="pf-btn {% if priority_filter == 'all' %}active-all{% endif %}">
+          <i class="fas fa-th-large"></i> All ({{ stats.available }})
+        </a>
+        <a href="?priority=normal&category={{ category_filter }}&location={{ location_filter }}" class="pf-btn {% if priority_filter == 'normal' %}active-normal{% endif %}">
+          🟢 Normal
+        </a>
+        <a href="?priority=urgent&category={{ category_filter }}&location={{ location_filter }}" class="pf-btn {% if priority_filter == 'urgent' %}active-urgent{% endif %}">
+          🟡 Urgent ({{ stats.urgent }})
+        </a>
+        <a href="?priority=emergency&category={{ category_filter }}&location={{ location_filter }}" class="pf-btn {% if priority_filter == 'emergency' %}active-emergency{% endif %}">
+          🔴 Emergency ({{ stats.emergency }})
+        </a>
+      </div>
+
+      <!-- Category Filter -->
+      <div class="priority-filter-bar" style="margin-top:10px">
+        <span class="pf-label"><i class="fas fa-tag"></i> Category:</span>
+        <a href="?priority={{ priority_filter }}" class="pf-btn {% if category_filter == 'all' %}active-all{% endif %}">
+          🍽️ All
+        </a>
+        <a href="?priority={{ priority_filter }}&category=Veg" class="pf-btn {% if category_filter == 'Veg' %}active-normal{% endif %}">
+          🥦 Veg {% if cat_counts.Veg %}<span style="opacity:.7">({{ cat_counts.Veg }})</span>{% endif %}
+        </a>
+        <a href="?priority={{ priority_filter }}&category=Non-Veg" class="pf-btn {% if category_filter == 'Non-Veg' %}active-urgent{% endif %}">
+          🍗 Non-Veg {% if cat_counts['Non-Veg'] %}<span style="opacity:.7">({{ cat_counts['Non-Veg'] }})</span>{% endif %}
+        </a>
+        <a href="?priority={{ priority_filter }}&category=Fruits" class="pf-btn {% if category_filter == 'Fruits' %}active-normal{% endif %}">
+          🍎 Fruits {% if cat_counts.Fruits %}<span style="opacity:.7">({{ cat_counts.Fruits }})</span>{% endif %}
+        </a>
+        <a href="?priority={{ priority_filter }}&category=Bakery" class="pf-btn {% if category_filter == 'Bakery' %}active-all{% endif %}">
+          🥐 Bakery {% if cat_counts.Bakery %}<span style="opacity:.7">({{ cat_counts.Bakery }})</span>{% endif %}
+        </a>
+        <a href="?priority={{ priority_filter }}&category=Cooked Meals" class="pf-btn {% if category_filter == 'Cooked Meals' %}active-normal{% endif %}">
+          🍛 Cooked Meals {% if cat_counts['Cooked Meals'] %}<span style="opacity:.7">({{ cat_counts['Cooked Meals'] }})</span>{% endif %}
+        </a>
+        <a href="?priority={{ priority_filter }}&category=Packaged Food" class="pf-btn {% if category_filter == 'Packaged Food' %}active-all{% endif %}">
+          📦 Packaged {% if cat_counts['Packaged Food'] %}<span style="opacity:.7">({{ cat_counts['Packaged Food'] }})</span>{% endif %}
+        </a>
+      </div>
+
+      <!-- Available Donations -->
+      <div class="card" style="margin-bottom:24px">
+        <div class="card-header">
+          <h4><i class="fas fa-gift" style="color:var(--amber)"></i> Available Food Donations
+            <span style="background:rgba(245,158,11,.15); color:var(--amber); border-radius:20px; padding:2px 10px; font-size:.78rem; margin-left:8px">{{ pending|length }}</span>
+          </h4>
+        </div>
+        <div class="table-wrap">
+          {% if pending %}
+          <table>
+            <thead>
+              <tr><th>Priority</th><th>#</th><th>Food</th><th>Qty</th><th>Donor</th><th>Address</th><th>Expiry</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+              {% for d in pending %}
+              <tr class="{% if d.priority == 'emergency' %}row-emergency{% elif d.priority == 'urgent' %}row-urgent{% endif %}">
+                <td>
+                  <span class="priority-badge priority-{{ d.priority or 'normal' }}">
+                    {% if d.priority == 'emergency' %}🔴 Emergency{% elif d.priority == 'urgent' %}🟡 Urgent{% else %}🟢 Normal{% endif %}
+                  </span>
+                </td>
+                <td style="color:var(--text-muted)">{{ d.id }}</td>
+                <td>
+                  <strong>{{ d.food_type }}</strong>
+                  <span style="display:inline-block; background:rgba(99,102,241,.12); color:#6366f1; border-radius:10px; font-size:.7rem; padding:1px 7px; margin-left:5px; vertical-align:middle">{{ d.category or '—' }}</span>
+                  {% if d.image_path %}
+                    <img src="{{ url_for('static', filename='images/' + d.image_path) }}"
+                         style="width:28px; height:28px; object-fit:cover; border-radius:4px; margin-left:6px; vertical-align:middle">
+                  {% endif %}
+                </td>
+                <td>{{ d.quantity }}</td>
+                <td>{{ d.donor_name }}</td>
+                <td style="max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.82rem">{{ d.address }}</td>
+                <td>
+                  {% if d.expiry_time %}
+                    <span data-expiry="{{ d.expiry_time }}" style="font-size:.8rem">{{ d.expiry_time[:16] }}</span>
+                  {% else %}—{% endif %}
+                </td>
+                <td>
+                  <div style="display:flex;gap:6px">
+                    <a href="{{ url_for('accept_donation', don_id=d.id) }}" class="btn btn-primary btn-sm">
+                      <i class="fas fa-check"></i> Accept
+                    </a>
+                    <button class="btn btn-outline btn-sm" onclick="openAssignModal({{ d.id }}, '{{ d.food_type }}')">
+                      <i class="fas fa-user-plus"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <div style="text-align:center; padding:48px; color:var(--text-muted)">
+            <div style="font-size:3rem; margin-bottom:12px">🎉</div>
+            <p>No donations available for this filter.</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Your Accepted Donations with tracking -->
+      <div class="card">
+        <div class="card-header">
+          <h4><i class="fas fa-tasks" style="color:var(--teal)"></i> Your Accepted Donations</h4>
+        </div>
+        {% if accepted %}
+        <div style="padding:16px; display:flex; flex-direction:column; gap:12px">
+          {% for d in accepted %}
+          <div class="assignment-card">
+            <div class="ac-header">
+              <div>
+                <div class="ac-food">{{ d.food_type }} <span style="font-size:.8rem;font-weight:400;color:var(--text-muted)">— {{ d.quantity }}</span></div>
+                <div style="font-size:.8rem;color:var(--text-muted);margin-top:2px">
+                  <i class="fas fa-user"></i> {{ d.donor_name }} &nbsp;·&nbsp;
+                  <i class="fas fa-map-marker-alt"></i> {{ d.address[:40] }}{% if d.address|length > 40 %}…{% endif %}
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span class="priority-badge priority-{{ d.priority or 'normal' }}">
+                  {% if d.priority == 'emergency' %}🔴{% elif d.priority == 'urgent' %}🟡{% else %}🟢{% endif %}
+                  {{ (d.priority or 'normal') | title }}
+                </span>
+                <span class="badge badge-{{ d.status }}">{{ d.status }}</span>
+              </div>
+            </div>
+
+            <!-- Volunteer assigned -->
+            {% if d.vol_name %}
+            <div class="ac-vol" style="margin-bottom:12px;padding:8px 12px;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.15);border-radius:8px">
+              <i class="fas fa-motorcycle" style="color:var(--green)"></i>
+              <strong>{{ d.vol_name }}</strong>
+              <span style="color:var(--text-muted)">is handling this delivery</span>
+            </div>
+            {% endif %}
+
+            <!-- Progress timeline -->
+            <div class="progress-timeline">
+              {% set stages = ['accepted','collected','delivered'] %}
+              {% set stage_icons = {'accepted':'✅','collected':'📦','delivered':'🎉'} %}
+              {% set stage_labels = {'accepted':'Accepted','collected':'Picked Up','delivered':'Delivered'} %}
+              {% set current_idx = stages.index(d.status) if d.status in stages else 0 %}
+              {% for i in range(stages|length) %}
+              {% set stage = stages[i] %}
+              <div class="pt-step {% if i < current_idx %}completed{% elif i == current_idx %}active{% endif %}">
+                <div class="pt-circle">
+                  {% if i <= current_idx %}<i class="fas fa-check" style="font-size:.7rem"></i>{% else %}<span style="font-size:.7rem">{{ i+1 }}</span>{% endif %}
+                </div>
+                <div class="pt-label">{{ stage_labels[stage] }}</div>
+              </div>
+              {% endfor %}
+            </div>
+
+            <div class="ac-actions">
+              {% if d.status == 'accepted' %}
+                <button class="btn btn-outline btn-sm" onclick="openAssignModal({{ d.id }}, '{{ d.food_type }}')">
+                  <i class="fas fa-user-plus"></i> Assign Volunteer
+                </button>
+                <a href="{{ url_for('update_status', don_id=d.id, new_status='collected') }}" class="btn btn-teal btn-sm">
+                  <i class="fas fa-truck"></i> Mark Collected
+                </a>
+              {% elif d.status == 'collected' %}
+                <a href="{{ url_for('update_status', don_id=d.id, new_status='delivered') }}" class="btn btn-primary btn-sm">
+                  <i class="fas fa-check-double"></i> Mark Delivered
+                </a>
+              {% else %}
+                <span style="color:var(--green); font-size:.85rem"><i class="fas fa-check-circle"></i> Completed</span>
+              {% endif %}
+              <a href="{{ url_for('chat', don_id=d.id) }}" class="btn btn-sm" style="background:rgba(99,102,241,.12);color:#6366f1;border:1px solid rgba(99,102,241,.3)">
+                <i class="fas fa-comments"></i> Chat
+              </a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align:center; padding:40px; color:var(--text-muted)">
+          <p>You haven't accepted any donations yet.</p>
+        </div>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Assign Volunteer Modal -->
+<div class="modal-overlay" id="assignModal">
+  <div class="modal-box">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <h3><i class="fas fa-user-plus" style="color:var(--green);margin-right:8px"></i> Assign Volunteer</h3>
+      <button class="modal-close" onclick="closeAssignModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <p style="color:var(--text-muted);font-size:.85rem;margin-bottom:16px">Select a volunteer for: <strong id="modal-food-name"></strong></p>
+    <form method="POST" action="{{ url_for('assign_volunteer') }}">
+      <input type="hidden" name="donation_id" id="modal-donation-id">
+      <div id="vol-options-list">
+        {% for v in volunteers %}
+        <label class="vol-option" onclick="selectVolOption(this)">
+          <input type="radio" name="volunteer_id" value="{{ v.id }}">
+          <div class="vol-avatar vol-{{ v.status }}-av">
+            {{ '🟢' if v.status == 'available' else '🟡' if v.status == 'on_delivery' else '⚫' }}
+          </div>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:.9rem">{{ v.name }}</div>
+            <div style="font-size:.78rem;color:var(--text-muted);margin-top:2px">
+              <i class="fas fa-motorcycle"></i> {{ v.vehicle }} &nbsp;·&nbsp;
+              <span class="vol-status-dot dot-{{ v.status }}"></span>
+              {{ v.status | replace('_',' ') | title }}
+            </div>
+          </div>
+          {% if v.status == 'on_delivery' %}
+          <span style="font-size:.72rem;color:var(--amber);padding:3px 8px;background:rgba(245,158,11,.1);border-radius:10px">Busy</span>
+          {% endif %}
+        </label>
+        {% endfor %}
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button type="submit" class="btn btn-primary" style="flex:1">
+          <i class="fas fa-check"></i> Assign
+        </button>
+        <button type="button" class="btn btn-outline" onclick="closeAssignModal()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+<script>
+
+// ── Assign Modal ─────────────────────────────
+function openAssignModal(donId, foodName) {
+  document.getElementById('modal-donation-id').value = donId;
+  document.getElementById('modal-food-name').textContent = foodName;
+  document.getElementById('assignModal').classList.add('open');
+}
+function closeAssignModal() {
+  document.getElementById('assignModal').classList.remove('open');
+}
+function selectVolOption(el) {
+  document.querySelectorAll('.vol-option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  el.querySelector('input[type=radio]').checked = true;
+}
+
+// Close modal on overlay click
+document.getElementById('assignModal').addEventListener('click', function(e) {
+  if (e.target === this) closeAssignModal();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Food Donation System — Share a Meal, Save a Life</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+<!-- ── Navigation ── -->
+<header class="home-nav">
+  <div class="logo">
+    <span>🍱</span> Food<span>Donate</span>
+  </div>
+  <nav class="home-nav-links">
+    <!-- Language Switcher -->
+    <div class="lang-dropdown">
+      <button class="lang-drop-btn">
+        <i class="fas fa-globe"></i>
+        {% if current_lang == 'ta' %}தமிழ்{% elif current_lang == 'hi' %}हिंदी{% else %}EN{% endif %}
+        <i class="fas fa-chevron-down" style="font-size:.65rem"></i>
+      </button>
+      <div class="lang-drop-menu">
+        {% for code, name in supported_langs.items() %}
+          <a href="{{ url_for('set_lang', lang=code) }}"
+             class="lang-drop-item {% if current_lang == code %}lang-drop-active{% endif %}">
+            {{ name }}
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+
+    {% if session.user_id %}
+      {% if session.user_role == 'admin' %}
+        <a href="{{ url_for('admin') }}" class="btn btn-outline btn-sm">{{ t('nav','admin_panel') }}</a>
+      {% elif session.user_role == 'ngo' %}
+        <a href="{{ url_for('ngo_dashboard') }}" class="btn btn-outline btn-sm">{{ t('nav','ngo_dashboard') }}</a>
+      {% else %}
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline btn-sm">{{ t('nav','dashboard') }}</a>
+      {% endif %}
+      <a href="{{ url_for('logout') }}" class="btn btn-primary btn-sm">{{ t('nav','logout') }}</a>
+    {% else %}
+      <a href="{{ url_for('login') }}"  class="btn btn-outline btn-sm">{{ t('nav','login') }}</a>
+      <a href="{{ url_for('signup') }}" class="btn btn-primary btn-sm">{{ t('nav','signup') }}</a>
+    {% endif %}
+  </nav>
+</header>
+
+<!-- ── Hero ── -->
+<main class="hero">
+  <div class="hero-content">
+    <div class="hero-badge">{{ t('home','tagline') }}</div>
+    <h1>{{ t('home','hero_title') }}<br><span class="accent">{{ t('home','hero_accent') }}</span></h1>
+    <p>{{ t('home','hero_desc') }}</p>
+    <div class="hero-btns">
+      <a href="{{ url_for('signup') }}" class="btn btn-primary">
+        <i class="fas fa-heart"></i> {{ t('home','start_donating') }}
+      </a>
+      <a href="{{ url_for('login') }}" class="btn btn-outline">
+        <i class="fas fa-sign-in-alt"></i> {{ t('home','sign_in') }}
+      </a>
+    </div>
+  </div>
+
+  <!-- Stats Band -->
+  <div class="home-stats">
+    <div class="home-stat">
+      <h3>{{ stats.total_donations }}</h3>
+      <p>{{ t('home','total_donations') }}</p>
+    </div>
+    <div class="home-stat">
+      <h3>{{ stats.delivered }}</h3>
+      <p>{{ t('home','meals_delivered') }}</p>
+    </div>
+    <div class="home-stat">
+      <h3>{{ stats.donors }}</h3>
+      <p>{{ t('home','active_donors') }}</p>
+    </div>
+    <div class="home-stat">
+      <h3>{{ stats.ngos }}</h3>
+      <p>{{ t('home','ngo_partners') }}</p>
+    </div>
+  </div>
+</main>
+
+<!-- ── Features ── -->
+<section class="features-section">
+  <h2>{{ t('home','features_title') }} <span style="color:var(--green)">{{ t('home','features_accent') }}</span></h2>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🚀</div>
+      <h4>Instant Donation</h4>
+      <p>Submit food donations in under 2 minutes with our streamlined form. No paperwork needed.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📍</div>
+      <h4>Real-time Tracking</h4>
+      <p>Track your donation from submission to delivery with live status updates and notifications.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🤝</div>
+      <h4>NGO Network</h4>
+      <p>Connected to verified NGOs and volunteers ready to collect and distribute your food.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📊</div>
+      <h4>Impact Dashboard</h4>
+      <p>See your cumulative impact with beautiful charts and donation history statistics.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔔</div>
+      <h4>Smart Notifications</h4>
+      <p>Get notified when your donation is accepted, collected, or delivered to beneficiaries.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⏰</div>
+      <h4>Expiry Monitoring</h4>
+      <p>Our system monitors food expiry times and alerts NGOs to act quickly on time-sensitive donations.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── Location Search ── -->
+<section style="padding: 0 48px 48px">
+  <h2 style="font-size:1.5rem; margin-bottom:16px;">
+    <i class="fas fa-map-marker-alt" style="color:var(--green)"></i>
+    {{ t('home','recent_donations') }}
+  </h2>
+
+  <!-- Search Bar -->
+  <form method="GET" action="{{ url_for('index') }}" class="location-search-form" id="locationSearchForm">
+    <div class="location-search-bar">
+      <i class="fas fa-search-location"></i>
+      <input type="text" name="location" id="locationInput"
+             placeholder="{{ t('home','search_location') }}"
+             value="{{ location_search }}"
+             autocomplete="off">
+      {% if location_search %}
+        <a href="{{ url_for('index') }}" class="clear-search-btn" title="Clear search">
+          <i class="fas fa-times"></i>
+        </a>
+      {% endif %}
+      <button type="submit" class="btn btn-primary btn-sm" style="border-radius:8px; padding:6px 18px">
+        <i class="fas fa-search"></i> {{ t('home','search_btn') }}
+      </button>
+    </div>
+  </form>
+
+  {% if location_search %}
+  <div class="search-result-label">
+    <i class="fas fa-map-marker-alt"></i>
+    {{ t('home','showing_results') }}: <strong>{{ location_search }}</strong>
+    — {{ recent|length }} donation(s) found
+  </div>
+  {% endif %}
+
+  <!-- Results Table -->
+  <div class="card" style="margin-top:16px">
+    <div class="card-header">
+      <h4>
+        <i class="fas fa-history" style="color:var(--green)"></i>
+        {% if location_search %}
+          {{ t('home','showing_results') }}: {{ location_search }}
+        {% else %}
+          {{ t('home','all_donations') }}
+        {% endif %}
+      </h4>
+    </div>
+    <div class="table-wrap">
+      {% if recent %}
+      <table>
+        <thead>
+          <tr>
+            <th>{{ t('home','col_food') }}</th>
+            <th>{{ t('home','col_qty') }}</th>
+            <th>{{ t('home','col_donor') }}</th>
+            <th>{{ t('home','col_location') }}</th>
+            <th>{{ t('home','col_status') }}</th>
+            <th>{{ t('home','col_date') }}</th>
+          </tr>
+        </thead>
+        <tbody id="donationResults">
+          {% for d in recent %}
+          <tr>
+            <td><strong>{{ d.food_type }}</strong></td>
+            <td>{{ d.quantity }}</td>
+            <td>{{ d.donor_name }}</td>
+            <td style="font-size:.82rem; color:var(--text-muted)">
+              <i class="fas fa-map-marker-alt" style="color:var(--green); font-size:.7rem"></i>
+              {{ d.city if d.city else (d.address[:30] + '…' if d.address|length > 30 else d.address) }}
+            </td>
+            <td><span class="badge badge-{{ d.status }}">{{ d.status }}</span></td>
+            <td style="color:var(--text-muted); font-size:.8rem">{{ d.created_at[:10] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div style="text-align:center; padding:48px; color:var(--text-muted)">
+        <div style="font-size:3rem; margin-bottom:12px">📭</div>
+        <p>No donations found{% if location_search %} in "{{ location_search }}"{% endif %}.</p>
+        {% if location_search %}
+          <a href="{{ url_for('index') }}" class="btn btn-outline btn-sm" style="margin-top:12px">
+            <i class="fas fa-times"></i> Clear Search
+          </a>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<footer style="text-align:center; padding:24px; border-top:1px solid var(--border); color:var(--text-muted); font-size:.85rem">
+  &copy; 2024 FoodDonate — {{ t('common','footer') }}
+</footer>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+<script>
+// Dynamic location search with debounce
+const locationInput = document.getElementById('locationInput');
+let searchTimer;
+if (locationInput) {
+  locationInput.addEventListener('input', function() {
+    clearTimeout(searchTimer);
+    const val = this.value.trim();
+    if (val.length < 2) return;
+    searchTimer = setTimeout(() => {
+      fetch(`/api/search-donations?location=${encodeURIComponent(val)}`)
+        .then(r => r.json())
+        .then(data => {
+          const tbody = document.getElementById('donationResults');
+          if (!tbody) return;
+          if (data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted)">No donations found in "${val}"</td></tr>`;
+            return;
+          }
+          tbody.innerHTML = data.map(d => `
+            <tr>
+              <td><strong>${d.food_type}</strong></td>
+              <td>${d.quantity}</td>
+              <td>${d.donor_name}</td>
+              <td style="font-size:.82rem;color:var(--text-muted)">
+                <i class="fas fa-map-marker-alt" style="color:var(--green);font-size:.7rem"></i>
+                ${d.city || (d.address.length > 30 ? d.address.substring(0,30)+'…' : d.address)}
+              </td>
+              <td><span class="badge badge-${d.status}">${d.status}</span></td>
+              <td style="color:var(--text-muted);font-size:.8rem">${d.created_at.substring(0,10)}</td>
+            </tr>
+          `).join('');
+        }).catch(console.error);
+    }, 400);
+  });
+}
+</script>
+</body>
+</html>

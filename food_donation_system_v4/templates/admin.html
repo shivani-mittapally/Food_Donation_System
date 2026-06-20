@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel — FoodDonate</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+<div class="layout">
+  {% set active_page = 'admin' %}
+  {% include 'sidebar_base.html' %}
+  <div class="main-content">
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+        <span class="topbar-title">Admin Panel</span>
+      </div>
+      <div class="topbar-actions">
+        <a href="{{ url_for('download_report') }}" class="btn btn-outline btn-sm">
+          <i class="fas fa-file-pdf"></i> Export PDF
+        </a>
+      </div>
+    </header>
+    <div class="flash-container">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in messages %}
+          <div class="alert alert-{{ cat }}"><i class="fas fa-info-circle"></i> {{ msg }}</div>
+        {% endfor %}
+      {% endwith %}
+    </div>
+    <div class="page-body">
+      <div style="margin-bottom:24px">
+        <h2 style="font-size:1.5rem">⚙️ Admin Overview</h2>
+        <p style="color:var(--text-muted);font-size:.875rem">System-wide management and monitoring.</p>
+      </div>
+
+      {% if stats.emergency > 0 %}
+      <div class="emergency-banner">
+        <div class="eb-icon">🚨</div>
+        <div class="eb-text">
+          <strong>{{ stats.emergency }} Emergency donation{{ 's' if stats.emergency > 1 else '' }} require immediate attention!</strong>
+          <p>Review and escalate these immediately.</p>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-icon icon-green"><i class="fas fa-users"></i></div><div class="stat-info"><h3>{{ stats.users }}</h3><p>Total Users</p></div></div>
+        <div class="stat-card"><div class="stat-icon icon-teal"><i class="fas fa-box"></i></div><div class="stat-info"><h3>{{ stats.donations }}</h3><p>All Donations</p></div></div>
+        <div class="stat-card"><div class="stat-icon icon-amber"><i class="fas fa-clock"></i></div><div class="stat-info"><h3>{{ stats.pending }}</h3><p>Pending</p></div></div>
+        <div class="stat-card"><div class="stat-icon icon-blue"><i class="fas fa-check-double"></i></div><div class="stat-info"><h3>{{ stats.delivered }}</h3><p>Delivered</p></div></div>
+        {% if stats.emergency > 0 %}
+        <div class="stat-card stat-emergency"><div class="stat-icon" style="background:rgba(239,68,68,.15);color:var(--red)"><i class="fas fa-exclamation-triangle"></i></div><div class="stat-info"><h3 style="color:var(--red)">{{ stats.emergency }}</h3><p>Emergency</p></div></div>
+        {% endif %}
+        {% if stats.urgent > 0 %}
+        <div class="stat-card stat-urgent"><div class="stat-icon" style="background:rgba(245,158,11,.15);color:var(--amber)"><i class="fas fa-bolt"></i></div><div class="stat-info"><h3 style="color:var(--amber)">{{ stats.urgent }}</h3><p>Urgent</p></div></div>
+        {% endif %}
+      </div>
+
+      <!-- All Donations -->
+      <div class="card" style="margin-bottom:24px">
+        <div class="card-header">
+          <h4><i class="fas fa-list-alt" style="color:var(--green)"></i> All Donations</h4>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Priority</th><th>#</th><th>Donor</th><th>Food</th><th>Qty</th><th>Status</th><th>Date</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+              {% for d in donations %}
+              <tr class="{% if d.priority == 'emergency' %}row-emergency{% elif d.priority == 'urgent' %}row-urgent{% endif %}">
+                <td>
+                  <span class="priority-badge priority-{{ d.priority or 'normal' }}">
+                    {% if d.priority == 'emergency' %}🔴{% elif d.priority == 'urgent' %}🟡{% else %}🟢{% endif %}
+                    {{ (d.priority or 'normal') | title }}
+                  </span>
+                </td>
+                <td style="color:var(--text-muted)">{{ d.id }}</td>
+                <td>{{ d.donor_name }}</td>
+                <td><strong>{{ d.food_type }}</strong></td>
+                <td>{{ d.quantity }}</td>
+                <td><span class="badge badge-{{ d.status }}">{{ d.status }}</span></td>
+                <td style="color:var(--text-muted);font-size:.8rem">{{ d.created_at[:10] }}</td>
+                <td>
+                  <div style="display:flex;gap:4px;flex-wrap:wrap">
+                    <div style="position:relative;display:inline-block" class="priority-dropdown">
+                      <button class="btn btn-outline btn-sm" onclick="toggleDropdown({{ d.id }})">
+                        <i class="fas fa-flag"></i>
+                      </button>
+                      <div id="dd-{{ d.id }}" style="display:none;position:absolute;right:0;top:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;z-index:100;min-width:140px;overflow:hidden;box-shadow:var(--shadow)">
+                        <a href="{{ url_for('update_priority', don_id=d.id, priority='normal') }}" style="display:flex;align-items:center;gap:8px;padding:9px 14px;color:var(--green);font-size:.82rem;border-bottom:1px solid var(--border)">🟢 Normal</a>
+                        <a href="{{ url_for('update_priority', don_id=d.id, priority='urgent') }}" style="display:flex;align-items:center;gap:8px;padding:9px 14px;color:var(--amber);font-size:.82rem;border-bottom:1px solid var(--border)">🟡 Urgent</a>
+                        <a href="{{ url_for('update_priority', don_id=d.id, priority='emergency') }}" style="display:flex;align-items:center;gap:8px;padding:9px 14px;color:var(--red);font-size:.82rem">🔴 Emergency</a>
+                      </div>
+                    </div>
+                    <a href="{{ url_for('delete_donation', don_id=d.id) }}"
+                       onclick="return confirm('Delete this donation?')"
+                       class="btn btn-sm" style="background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)">
+                      <i class="fas fa-trash"></i>
+                    </a>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Users -->
+      <div class="card">
+        <div class="card-header">
+          <h4><i class="fas fa-users" style="color:var(--blue)"></i> Users ({{ users|length }})</h4>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>#</th><th>Name</th><th>Email</th><th>Role</th><th>Joined</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+              {% for u in users %}
+              <tr>
+                <td style="color:var(--text-muted)">{{ u.id }}</td>
+                <td><strong>{{ u.name }}</strong></td>
+                <td style="color:var(--text-muted);font-size:.85rem">{{ u.email }}</td>
+                <td>
+                  <span class="badge {% if u.role == 'admin' %}badge-collected{% elif u.role == 'ngo' %}badge-accepted{% else %}badge-pending{% endif %}">
+                    {{ u.role | title }}
+                  </span>
+                </td>
+                <td style="color:var(--text-muted);font-size:.8rem">{{ u.created_at[:10] }}</td>
+                <td>
+                  {% if u.role != 'admin' %}
+                  <a href="{{ url_for('delete_user', uid=u.id) }}"
+                     onclick="return confirm('Delete this user?')"
+                     class="btn btn-sm" style="background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2)">
+                    <i class="fas fa-user-times"></i>
+                  </a>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+<script>
+function toggleDropdown(id) {
+  const dd = document.getElementById('dd-' + id);
+  document.querySelectorAll('[id^="dd-"]').forEach(el => { if (el.id !== 'dd-' + id) el.style.display = 'none'; });
+  dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.priority-dropdown')) {
+    document.querySelectorAll('[id^="dd-"]').forEach(el => el.style.display = 'none');
+  }
+});
+</script>
+</body>
+</html>
